@@ -21,6 +21,9 @@ def load_lidar_csv(path: str) -> tuple[np.ndarray, list[np.ndarray]]:
             timestamp_us, _seq, frame_id, x, y, _z = line.rstrip("\n").split(";")
             xs = np.fromstring(x, dtype=np.float32, sep=",")
             ys = np.fromstring(y, dtype=np.float32, sep=",")
+            valid = (xs != 0.0) | (ys != 0.0)
+            xs = xs[valid]
+            ys = ys[valid]
             xyz = np.zeros((xs.shape[0], 3), dtype=np.float32)
             xyz[:, 0] = xs
             xyz[:, 1] = ys
