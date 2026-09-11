@@ -27,3 +27,11 @@ def navigating_mask(timestamps: np.ndarray, ranges: np.ndarray) -> np.ndarray:
     for start, end in ranges:
         mask |= (timestamps >= start) & (timestamps < end)
     return mask
+
+
+def stretch_ids(timestamps: np.ndarray, ranges: np.ndarray) -> np.ndarray:
+    """Maps each timestamp to the index (into ranges, chronological) of the navigating stretch it falls in.
+
+    Every timestamp must already fall inside some range (e.g. have passed navigating_mask).
+    """
+    return np.searchsorted(ranges[:, 0], timestamps, side="right") - 1

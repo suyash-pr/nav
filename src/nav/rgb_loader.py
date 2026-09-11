@@ -84,7 +84,8 @@ class RgbDataset(Dataset):
         self.cameras = cameras
         self.size = size
 
-        ranges = navigating_ranges(nav_cmd)
+        self.ranges = navigating_ranges(nav_cmd)
+        ranges = self.ranges
         filtered_timestamps = []
         filtered_paths = []
         for camera in cameras:
