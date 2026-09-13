@@ -1,10 +1,14 @@
 import os
+from collections.abc import Iterator
 
 import numpy as np
 import pandas as pd
 
 from nav.frame_transformer import lidar_to_robot
-from nav.utils.data_utils import navigating_mask, navigating_ranges
+from nav.utils.data_utils import navigating_mask, navigating_ranges, nearest_within
+
+BEV_EXTENT_M = 6.0
+BEV_RESOLUTION_M = 0.1
 
 
 def load_lidar_csv(path: str) -> tuple[np.ndarray, list[np.ndarray]]:
@@ -49,6 +53,39 @@ def load_lidars(csv_paths: list[str]) -> dict[str, tuple[np.ndarray, list[np.nda
             frame_id = next(f).split(";")[2]
         result[frame_id] = (timestamps, points)
     return result
+
+
+def rasterize_bev(points_xy: np.ndarray, extent_m: float = BEV_EXTENT_M, resolution_m: float = BEV_RESOLUTION_M) -> np.ndarray:
+    """Rasterizes robot-frame XY points into a centered top-down occupancy grid."""
+    size = round(2 * extent_m / resolution_m)
+    grid = np.zeros((size, size), dtype=np.uint8)
+    row = np.floor((points_xy[:, 0] + extent_m) / resolution_m).astype(np.int64)
+    col = np.floor((points_xy[:, 1] + extent_m) / resolution_m).astype(np.int64)
+    valid = (row >= 0) & (row < size) & (col >= 0) & (col < size)
+    grid[row[valid], col[valid]] = 1
+    return grid
+
+
+def merge_scans(
+    ref_ts: np.ndarray,
+    ref_points: list[np.ndarray],
+    others: list[tuple[np.ndarray, list[np.ndarray]]],
+    tolerance_us: int = 60_000,
+) -> Iterator[tuple[int, np.ndarray]]:
+    """Yields (timestamp_us, occupancy_grid), merging ref with the nearest scan within tolerance from each other lidar."""
+    other_lookup = [(nearest_within(ts, ref_ts, tolerance_us), pts) for ts, pts in others]
+    for i, t in enumerate(ref_ts):
+        points = [ref_points[i]]
+        for (idx, ok), pts in other_lookup:
+            if ok[i]:
+                points.append(pts[idx[i]])
+        merged = np.concatenate(points, axis=0)
+        yield int(t), rasterize_bev(merged)
+
+
+def open_lidar_bev(bev_path: str) -> np.ndarray:
+    """Opens preprocessed BEV grids as a read-only memmap."""
+    return np.load(bev_path, mmap_mode="r")
 
 
 if __name__ == "__main__":

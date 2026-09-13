@@ -15,11 +15,11 @@ CAMERAS = ("oakd_front", "oakd_left", "oakd_right", "oakd_back")
 IMAGE_DIRS = ("images_0", "images_1", "images_2", "images_3")
 
 
-def list_camera_frames(camera_dir: str) -> tuple[np.ndarray, list[str]]:
-    """Lists a camera's frames across its images_0..3 dirs, returning (timestamps_us, paths), sorted and deduplicated by timestamp."""
+def list_camera_frames(camera_dir: str, image_dirs: tuple[str, ...] = IMAGE_DIRS) -> tuple[np.ndarray, list[str]]:
+    """Lists a camera's frames across its shard dirs, returning (timestamps_us, paths), sorted and deduplicated by timestamp."""
     timestamps = []
     paths = []
-    for image_dir in IMAGE_DIRS:
+    for image_dir in image_dirs:
         dir_path = os.path.join(camera_dir, image_dir)
         for name in os.listdir(dir_path):
             timestamps.append(int(name.split("_", 1)[0]))
