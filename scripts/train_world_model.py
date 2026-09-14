@@ -11,6 +11,7 @@ from nav.models.world_model import JepaWorldModel
 
 DATA_DIR = "/data/model-training"
 CSV_PATH = os.path.join(DATA_DIR, "sains-ladbroke-grove_karter-01_2026-05-21_03-35-26_ll_navigation_command_ll_navigation_command.csv")
+CAMERAS = ("oakd_front", "oakd_back")  # the only cameras with depth coverage
 
 
 @dataclass
@@ -43,10 +44,11 @@ def main() -> None:
         config.csv_path,
         config.bev_path,
         config.bev_ts_path,
+        cameras=CAMERAS,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
     )
-    model = JepaWorldModel(lr=config.lr)
+    model = JepaWorldModel(n_cameras=len(CAMERAS), lr=config.lr)
 
     logger = WandbLogger(
         project=config.wandb_project,

@@ -18,6 +18,26 @@ def load_depth(path: str, size: tuple[int, int] = DEPTH_SIZE) -> np.ndarray:
     return depth_mm * DEPTH_SCALE_M
 
 
+def list_depth_frames(data_dir: str, camera: str) -> tuple[np.ndarray, list[str]]:
+    """Lists a camera's depth frames from its flat top-level topic dir (`camera_<name>_mono_r`).
+
+    Unlike RGB, depth frames aren't sharded under the camera dir in this export - they sit directly
+    in a sibling topic dir. Returns (timestamps_us, paths), sorted and deduplicated by timestamp.
+    """
+    dir_path = os.path.join(data_dir, f"camera_{camera}_mono_r")
+    timestamps = []
+    paths = []
+    for name in os.listdir(dir_path):
+        prefix = name.split("_", 1)[0]
+        if not prefix.isdigit():
+            continue
+        timestamps.append(int(prefix))
+        paths.append(os.path.join(dir_path, name))
+    timestamps_arr, unique_idx = np.unique(np.array(timestamps, dtype=np.int64), return_index=True)
+    unique_paths = [paths[i] for i in unique_idx]
+    return timestamps_arr, unique_paths
+
+
 if __name__ == "__main__":
     from nav.rgb_loader import list_camera_frames
 

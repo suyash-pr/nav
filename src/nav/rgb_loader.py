@@ -16,13 +16,24 @@ IMAGE_DIRS = ("images_0", "images_1", "images_2", "images_3")
 
 
 def list_camera_frames(camera_dir: str, image_dirs: tuple[str, ...] = IMAGE_DIRS) -> tuple[np.ndarray, list[str]]:
-    """Lists a camera's frames across its shard dirs, returning (timestamps_us, paths), sorted and deduplicated by timestamp."""
+    """Lists a camera's frames across its shard dirs, returning (timestamps_us, paths), sorted and deduplicated by timestamp.
+
+    Falls back to whatever subdirs camera_dir actually has if none of image_dirs exist, since exports
+    shard frames under different names (e.g. a single "image_raw" dir instead of images_0..3).
+    """
+    shard_dirs = [d for d in image_dirs if os.path.isdir(os.path.join(camera_dir, d))]
+    if not shard_dirs:
+        shard_dirs = [d for d in os.listdir(camera_dir) if os.path.isdir(os.path.join(camera_dir, d))]
+
     timestamps = []
     paths = []
-    for image_dir in image_dirs:
+    for image_dir in shard_dirs:
         dir_path = os.path.join(camera_dir, image_dir)
         for name in os.listdir(dir_path):
-            timestamps.append(int(name.split("_", 1)[0]))
+            prefix = name.split("_", 1)[0]
+            if not prefix.isdigit():
+                continue
+            timestamps.append(int(prefix))
             paths.append(os.path.join(dir_path, name))
 
     timestamps_arr, unique_idx = np.unique(np.array(timestamps, dtype=np.int64), return_index=True)

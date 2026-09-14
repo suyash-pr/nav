@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 
@@ -33,9 +34,13 @@ def preprocess(data_dir: str, out_dir: str) -> None:
 
 
 if __name__ == "__main__":
-    data_dir = r"/data/model-training"
-    out_dir = os.path.join(data_dir, "derived")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", default="/data/model-training")
+    parser.add_argument("--out_dir", default="")
+    args = parser.parse_args()
+
+    out_dir = args.out_dir or os.path.join(args.data_dir, "derived")
 
     start = time.time()
-    preprocess(data_dir, out_dir)
+    preprocess(args.data_dir, out_dir)
     print(f"wrote {out_dir} in {time.time() - start:.1f}s")

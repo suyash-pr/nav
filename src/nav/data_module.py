@@ -6,7 +6,7 @@ import torch
 from lightning.pytorch import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, Subset
 
-from nav.depth_loader import DEPTH_DIRS, DEPTH_MAX_M, DEPTH_SIZE, load_depth
+from nav.depth_loader import DEPTH_MAX_M, DEPTH_SIZE, list_depth_frames, load_depth
 from nav.lidar_loader import open_lidar_bev
 from nav.rgb_loader import CAMERAS, RgbDataset, list_camera_frames, load_image
 from nav.utils.data_utils import (
@@ -145,7 +145,7 @@ class WorldModelDataset(Dataset):
         for cam_i, camera in enumerate(cameras):
             camera_dir = os.path.join(data_dir, camera)
             rgb_ts, rgb_paths = list_camera_frames(camera_dir)
-            depth_ts, depth_paths = list_camera_frames(camera_dir, DEPTH_DIRS)
+            depth_ts, depth_paths = list_depth_frames(data_dir, camera)
             self.rgb_paths.append(rgb_paths)
             self.depth_paths.append(depth_paths)
             for step in range(2):
