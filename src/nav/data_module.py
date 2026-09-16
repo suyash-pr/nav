@@ -18,7 +18,7 @@ from nav.utils.data_utils import (
 
 STEP_US = 200_000
 LATENCY_US = {"rgb": 130_000, "depth": 150_000, "lidar": 100_000}
-TOLERANCE_US = {"rgb": 100_000, "depth": 60_000, "lidar": 60_000}
+TOLERANCE_US = {"rgb": 100_000, "depth": 260_000, "lidar": 60_000}
 
 
 def chronological_split(timestamps: np.ndarray, ranges: np.ndarray, val_fraction: float) -> tuple[np.ndarray, np.ndarray]:

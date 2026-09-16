@@ -9,8 +9,8 @@ from lightning.pytorch.loggers import WandbLogger
 from nav.data_module import WorldModelDataModule
 from nav.models.world_model import JepaWorldModel
 
-DATA_DIR = "/data/model-training"
-CSV_PATH = os.path.join(DATA_DIR, "sains-ladbroke-grove_karter-01_2026-05-21_03-35-26_ll_navigation_command_ll_navigation_command.csv")
+DATA_DIR = "/data/tdmpc/suyash"
+CSV_PATH = os.path.join(r"/data/tdmpc/suyash/sains-ladbroke-grove_karter-01_2026-05-21_03-35-26_ll_navigation_command_ll_navigation_command.csv")
 CAMERAS = ("oakd_front", "oakd_back")  # the only cameras with depth coverage
 
 
@@ -25,7 +25,7 @@ class Config:
     max_epochs: int = 50
     lr: float = 3e-4
     wandb_project: str = os.environ.get("WANDB_PROJECT", "tdmpc")
-    wandb_entity: str = os.environ.get("WANDB_ENTITY", "p9r7-org")
+    wandb_entity: str = os.environ.get("WANDB_ENTITY", "p9r7")
     run_name: str = ""
 
 

@@ -32,7 +32,7 @@ class RgbEncoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, n_cam, c, h, w = x.shape
-        x = x.view(b * n_cam, c, h, w)
+        x = x.reshape(b * n_cam, c, h, w)
         x = (x - self.mean) / self.std
         with torch.no_grad():
             feat = self.trunk(x)
