@@ -2,6 +2,7 @@ import argparse
 import os
 from dataclasses import dataclass, fields
 
+import torch
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
@@ -20,9 +21,9 @@ class Config:
     csv_path: str = CSV_PATH
     bev_path: str = os.path.join(DATA_DIR, "derived", "lidar_bev.npy")
     bev_ts_path: str = os.path.join(DATA_DIR, "derived", "lidar_bev_ts.npy")
-    batch_size: int = 32
+    batch_size: int = 256
     num_workers: int = 12
-    max_epochs: int = 50
+    max_epochs: int = 250
     lr: float = 3e-4
     wandb_project: str = os.environ.get("WANDB_PROJECT", "tdmpc")
     wandb_entity: str = os.environ.get("WANDB_ENTITY", "p9r7")
@@ -38,6 +39,8 @@ def parse_args() -> Config:
 
 def main() -> None:
     config = parse_args()
+
+    torch.set_float32_matmul_precision("high")
 
     dm = WorldModelDataModule(
         config.data_dir,
@@ -56,6 +59,7 @@ def main() -> None:
         name=config.run_name or None,
         log_model=False,
     )
+    logger.log_hyperparams({"batch_size": config.batch_size})
     trainer = Trainer(
         accelerator="gpu",
         precision="bf16-mixed",

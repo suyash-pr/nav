@@ -21,6 +21,8 @@ class JepaWorldModel(LightningModule):
         hidden: int = 256,
         ema_tau: float = 0.99,
         lr: float = 3e-4,
+        vicreg_std_weight: float = 0.5,
+        vicreg_cov_weight: float = 1.0,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -54,7 +56,17 @@ class JepaWorldModel(LightningModule):
             z_next = self.encode(self.target_encoders, batch, 1)
         pred = self.dynamics(z_t, batch["action"])
 
-        loss = F.smooth_l1_loss(pred, z_next)
+        pred_loss = F.smooth_l1_loss(pred, z_next)
+        std_loss = F.relu(1 - (z_t.var(dim=0) + 1e-4).sqrt()).mean()
+        z_c = z_t - z_t.mean(dim=0)
+        cov = (z_c.T @ z_c) / (z_c.shape[0] - 1)
+        cov_loss = (cov.pow(2).sum() - cov.diagonal().pow(2).sum()) / z_c.shape[1]
+        loss = (
+            pred_loss
+            + self.hparams.vicreg_std_weight * std_loss
+            + self.hparams.vicreg_cov_weight * cov_loss
+        )
+
         identity_loss = F.smooth_l1_loss(z_t, z_next)
         z_std = z_t.std(dim=0).mean()
         return {"loss": loss, "identity_loss": identity_loss, "z_std": z_std}

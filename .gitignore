@@ -12,3 +12,4 @@ wheels/
 # Local run artifacts
 wandb/
 logs/
+tdmpc
