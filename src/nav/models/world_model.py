@@ -22,7 +22,7 @@ class JepaWorldModel(LightningModule):
         ema_tau: float = 0.99,
         lr: float = 3e-4,
         vicreg_std_weight: float = 0.5,
-        vicreg_cov_weight: float = 1.0,
+        vicreg_cov_weight: float = 0.5,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -50,6 +50,21 @@ class JepaWorldModel(LightningModule):
         z_t = self.encode(self.encoders, batch, 0)
         return self.dynamics(z_t, batch["action"])
 
+    def block_vicreg_loss(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Std/cov VICReg losses computed within each modality block, so the cov penalty
+        doesn't fight cross-modal correlations the dynamics model relies on."""
+        std_losses = []
+        cov_losses = []
+        start = 0
+        for size in (self.hparams.rgb_dim, self.hparams.depth_dim, self.hparams.lidar_dim):
+            block = z[:, start : start + size]
+            start += size
+            std_losses.append(F.relu(1 - (block.var(dim=0) + 1e-4).sqrt()).mean())
+            block_c = block - block.mean(dim=0)
+            cov = (block_c.T @ block_c) / (block_c.shape[0] - 1)
+            cov_losses.append((cov.pow(2).sum() - cov.diagonal().pow(2).sum()) / size)
+        return torch.stack(std_losses).mean(), torch.stack(cov_losses).mean()
+
     def shared_step(self, batch: dict) -> dict:
         z_t = self.encode(self.encoders, batch, 0)
         with torch.no_grad():
@@ -57,10 +72,7 @@ class JepaWorldModel(LightningModule):
         pred = self.dynamics(z_t, batch["action"])
 
         pred_loss = F.smooth_l1_loss(pred, z_next)
-        std_loss = F.relu(1 - (z_t.var(dim=0) + 1e-4).sqrt()).mean()
-        z_c = z_t - z_t.mean(dim=0)
-        cov = (z_c.T @ z_c) / (z_c.shape[0] - 1)
-        cov_loss = (cov.pow(2).sum() - cov.diagonal().pow(2).sum()) / z_c.shape[1]
+        std_loss, cov_loss = self.block_vicreg_loss(z_t)
         loss = (
             pred_loss
             + self.hparams.vicreg_std_weight * std_loss
