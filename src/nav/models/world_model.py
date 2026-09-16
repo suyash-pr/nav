@@ -69,16 +69,29 @@ class JepaWorldModel(LightningModule):
 
         identity_loss = F.smooth_l1_loss(z_t, z_next)
         z_std = z_t.std(dim=0).mean()
-        return {"loss": loss, "identity_loss": identity_loss, "z_std": z_std}
+        return {
+            "loss": loss,
+            "pred_loss": pred_loss,
+            "std_loss": std_loss,
+            "cov_loss": cov_loss,
+            "identity_loss": identity_loss,
+            "z_std": z_std,
+        }
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
         metrics = self.shared_step(batch)
         self.log("train_loss", metrics["loss"])
+        self.log("train_pred_loss", metrics["pred_loss"])
+        self.log("train_std_loss", metrics["std_loss"])
+        self.log("train_cov_loss", metrics["cov_loss"])
         return metrics["loss"]
 
     def validation_step(self, batch: dict, batch_idx: int) -> None:
         metrics = self.shared_step(batch)
         self.log("val_loss", metrics["loss"])
+        self.log("val_pred_loss", metrics["pred_loss"])
+        self.log("val_std_loss", metrics["std_loss"])
+        self.log("val_cov_loss", metrics["cov_loss"])
         self.log("val_identity_loss", metrics["identity_loss"])
         self.log("val_z_std", metrics["z_std"])
 
