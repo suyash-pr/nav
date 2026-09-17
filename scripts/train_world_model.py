@@ -25,6 +25,7 @@ class Config:
     num_workers: int = 12
     max_epochs: int = 250
     lr: float = 3e-4
+    grad_clip_norm: float = 20.0
     wandb_project: str = os.environ.get("WANDB_PROJECT", "tdmpc")
     wandb_entity: str = os.environ.get("WANDB_ENTITY", "p9r7")
     run_name: str = ""
@@ -64,6 +65,8 @@ def main() -> None:
         accelerator="gpu",
         precision="bf16-mixed",
         max_epochs=config.max_epochs,
+        gradient_clip_val=config.grad_clip_norm,
+        gradient_clip_algorithm="norm",
         callbacks=[ModelCheckpoint(monitor="val_loss")],
         logger=logger,
     )

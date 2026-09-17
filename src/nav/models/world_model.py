@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn.functional as F
 from lightning.pytorch import LightningModule
+from lightning.pytorch.utilities import grad_norm
 from torch import nn
 
 from nav.models.dynamics import LatentDynamics
@@ -21,6 +22,7 @@ class JepaWorldModel(LightningModule):
         hidden: int = 256,
         ema_tau: float = 0.99,
         lr: float = 3e-4,
+        enc_lr_scale: float = 0.3,
         vicreg_std_weight: float = 0.5,
         vicreg_cov_weight: float = 0.5,
     ):
@@ -52,7 +54,12 @@ class JepaWorldModel(LightningModule):
 
     def block_vicreg_loss(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Std/cov VICReg losses computed within each modality block, so the cov penalty
-        doesn't fight cross-modal correlations the dynamics model relies on."""
+        doesn't fight cross-modal correlations the dynamics model relies on.
+
+        Computed in float32 regardless of autocast dtype: variances/covariances involve
+        small magnitudes and squared terms that lose precision under bf16 mixed precision.
+        """
+        z = z.float()
         std_losses = []
         cov_losses = []
         start = 0
@@ -107,11 +114,21 @@ class JepaWorldModel(LightningModule):
         self.log("val_identity_loss", metrics["identity_loss"])
         self.log("val_z_std", metrics["z_std"])
 
+    def on_before_optimizer_step(self, optimizer) -> None:
+        norms = grad_norm(self, norm_type=2)
+        self.log("grad_norm", norms["grad_2.0_norm_total"])
+
     def on_before_zero_grad(self, optimizer) -> None:
         tau = self.hparams.ema_tau
         for online, target in zip(self.encoders.parameters(), self.target_encoders.parameters()):
             target.data.mul_(tau).add_(online.data, alpha=1 - tau)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        params = [p for p in self.parameters() if p.requires_grad]
-        return torch.optim.Adam(params, lr=self.hparams.lr)
+        enc_params = [p for p in self.encoders.parameters() if p.requires_grad]
+        other_params = [p for p in self.dynamics.parameters() if p.requires_grad]
+        return torch.optim.Adam(
+            [
+                {"params": enc_params, "lr": self.hparams.lr * self.hparams.enc_lr_scale},
+                {"params": other_params, "lr": self.hparams.lr},
+            ]
+        )
