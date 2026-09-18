@@ -20,7 +20,7 @@ class JepaWorldModel(LightningModule):
         depth_dim: int = 32,
         lidar_dim: int = 32,
         hidden: int = 256,
-        ema_tau: float = 0.99,
+        ema_tau: float = 0.95,
         lr: float = 3e-4,
         enc_lr_scale: float = 0.3,
         vicreg_std_weight: float = 0.5,

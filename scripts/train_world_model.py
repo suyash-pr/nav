@@ -69,6 +69,7 @@ def main() -> None:
         gradient_clip_algorithm="norm",
         callbacks=[ModelCheckpoint(monitor="val_loss")],
         logger=logger,
+        log_every_n_steps=1,
     )
     trainer.fit(model, datamodule=dm)
 
